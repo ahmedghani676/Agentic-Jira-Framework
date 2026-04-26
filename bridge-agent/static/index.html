@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WorkFlex Bridge Agent</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #222632;
+      --border: #2a2e3b;
+      --text: #e4e6eb;
+      --text-dim: #8b8fa3;
+      --green: #34d399;
+      --red: #f87171;
+      --yellow: #fbbf24;
+      --blue: #60a5fa;
+      --purple: #a78bfa;
+      --teal: #2dd4bf;
+      --radius: 12px;
+      --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── Header ── */
+    .header {
+      border-bottom: 1px solid var(--border);
+      padding: 18px 32px;
+      display: flex; align-items: center; gap: 16px;
+    }
+    .logo { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
+    .logo span { color: var(--teal); }
+    .header-badge {
+      font-size: 11px; font-weight: 500; padding: 3px 8px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text-dim);
+    }
+    .header-right { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-dim); }
+    .status-dot.ok { background: var(--green); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .status-label { font-size: 12px; color: var(--text-dim); }
+
+    /* ── Main layout ── */
+    .main { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+
+    /* ── Hero action bar ── */
+    .action-bar {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px 28px;
+      display: flex; align-items: center; gap: 20px; margin-bottom: 28px;
+    }
+    .action-info { flex: 1; }
+    .action-info h2 { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+    .action-info p { font-size: 13px; color: var(--text-dim); line-height: 1.5; }
+    .btn {
+      padding: 10px 22px; border-radius: 8px; border: none;
+      font-family: var(--font); font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    }
+    .btn-primary { background: var(--teal); color: #0f1117; }
+    .btn-primary:hover { background: #5eead4; }
+    .btn-primary:disabled { background: var(--surface2); color: var(--text-dim); cursor: not-allowed; }
+    .btn-submit { background: var(--green); color: #0f1117; }
+    .btn-submit:hover { background: #6ee7b7; }
+    .btn-submit:disabled { background: var(--surface2); color: var(--text-dim); cursor: not-allowed; }
+    .btn-secondary {
+      background: var(--surface2); color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { border-color: #444; }
+
+    /* ── Stats row ── */
+    .stats { display: flex; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px 20px; flex: 1; min-width: 120px;
+    }
+    .stat-value { font-size: 26px; font-weight: 700; }
+    .stat-label { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+    .stat-create .stat-value { color: var(--green); }
+    .stat-update .stat-value { color: var(--blue); }
+    .stat-skip .stat-value { color: var(--text-dim); }
+    .stat-total .stat-value { color: var(--text); }
+
+    /* ── Section heading ── */
+    .section-head {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    }
+    .section-head h3 { font-size: 15px; font-weight: 600; }
+    .section-head .count {
+      font-size: 12px; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 2px 8px; color: var(--text-dim);
+    }
+    .filter-tabs { display: flex; gap: 6px; margin-left: auto; }
+    .tab {
+      padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 500;
+      cursor: pointer; border: 1px solid var(--border); background: none;
+      color: var(--text-dim); font-family: var(--font); transition: all 0.1s;
+    }
+    .tab.active { background: var(--surface2); color: var(--text); border-color: #444; }
+
+    /* ── Decision cards ── */
+    .decisions { display: flex; flex-direction: column; gap: 12px; }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+      transition: border-color 0.15s;
+    }
+    .card:hover { border-color: #3a3e4b; }
+    .card.action-CREATE { border-left: 3px solid var(--green); }
+    .card.action-UPDATE { border-left: 3px solid var(--blue); }
+    .card.action-SKIP   { border-left: 3px solid var(--text-dim); opacity: 0.6; }
+    .card.submitted     { border-left-color: var(--purple); }
+
+    .card-header {
+      padding: 14px 18px; display: flex; align-items: center; gap: 12px;
+      cursor: pointer; user-select: none;
+    }
+    .action-badge {
+      font-size: 11px; font-weight: 700; padding: 3px 8px;
+      border-radius: 5px; letter-spacing: 0.05em; flex-shrink: 0;
+    }
+    .badge-CREATE { background: rgba(52,211,153,.15); color: var(--green); }
+    .badge-UPDATE { background: rgba(96,165,250,.15); color: var(--blue); }
+    .badge-SKIP   { background: rgba(139,143,163,.1); color: var(--text-dim); }
+    .badge-SUBMITTED { background: rgba(167,139,250,.15); color: var(--purple); }
+
+    .card-summary { flex: 1; }
+    .card-title { font-size: 14px; font-weight: 600; }
+    .card-meta { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
+    .arr-chip {
+      font-size: 11px; font-weight: 600; padding: 3px 8px;
+      border-radius: 5px; background: rgba(45,212,191,.1);
+      color: var(--teal); flex-shrink: 0;
+    }
+    .arr-chip.unknown { background: rgba(139,143,163,.1); color: var(--text-dim); }
+    .chevron { color: var(--text-dim); transition: transform 0.2s; flex-shrink: 0; }
+    .chevron.open { transform: rotate(180deg); }
+
+    .card-body { display: none; border-top: 1px solid var(--border); }
+    .card-body.open { display: block; }
+
+    .card-section { padding: 16px 18px; border-bottom: 1px solid var(--border); }
+    .card-section:last-child { border-bottom: none; }
+    .section-label {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--text-dim); margin-bottom: 8px;
+    }
+    .message-bubble {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 14px;
+      font-size: 13px; line-height: 1.6; color: var(--text);
+    }
+    .message-sender { font-weight: 600; margin-bottom: 4px; font-size: 12px; color: var(--teal); }
+
+    .draft-box {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 14px;
+      font-size: 13px; line-height: 1.6; white-space: pre-wrap;
+      font-family: var(--mono); color: var(--text);
+    }
+    .jira-link {
+      font-size: 13px; font-weight: 600; color: var(--blue);
+      text-decoration: none;
+    }
+    .jira-link:hover { text-decoration: underline; }
+    .feedback-box {
+      background: rgba(52,211,153,.05); border: 1px solid rgba(52,211,153,.2);
+      border-radius: 8px; padding: 12px 14px;
+      font-size: 13px; color: var(--green);
+    }
+
+    /* ── Empty / loading states ── */
+    .empty {
+      text-align: center; padding: 64px 24px; color: var(--text-dim);
+    }
+    .empty-icon { font-size: 40px; margin-bottom: 16px; }
+    .empty h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+    .empty p { font-size: 14px; line-height: 1.6; }
+
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2px solid var(--border); border-top-color: var(--teal);
+      border-radius: 50%; animation: spin .7s linear infinite; display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-bar {
+      text-align: center; padding: 48px; color: var(--text-dim);
+    }
+    .loading-bar p { margin-top: 16px; font-size: 14px; }
+
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px 20px; font-size: 13px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.4);
+      display: flex; align-items: center; gap: 10px;
+      transform: translateY(80px); opacity: 0;
+      transition: all 0.3s; z-index: 100;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { border-color: var(--green); }
+    .toast.error   { border-color: var(--red); }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">WorkFlex <span>Bridge Agent</span></div>
+  <span class="header-badge">Admin Console</span>
+  <div class="header-right">
+    <div class="status-dot" id="healthDot"></div>
+    <span class="status-label" id="healthLabel">Checking…</span>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- Action bar -->
+  <div class="action-bar">
+    <div class="action-info">
+      <h2>Process Feature Requests</h2>
+      <p>Scan the Teams #feature-requests channel, cross-reference HubSpot ARR,
+         check Jira for duplicates, and draft ticket actions for your review.</p>
+    </div>
+    <button class="btn btn-primary" id="btnProcess" onclick="runProcess()">
+      Process Messages
+    </button>
+    <button class="btn btn-submit" id="btnSubmit" onclick="runSubmit()" disabled>
+      Submit to Jira &amp; Teams
+    </button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats" id="stats" style="display:none">
+    <div class="stat-card stat-total">
+      <div class="stat-value" id="statTotal">0</div>
+      <div class="stat-label">Total messages</div>
+    </div>
+    <div class="stat-card stat-create">
+      <div class="stat-value" id="statCreate">0</div>
+      <div class="stat-label">New tickets</div>
+    </div>
+    <div class="stat-card stat-update">
+      <div class="stat-value" id="statUpdate">0</div>
+      <div class="stat-label">Updates</div>
+    </div>
+    <div class="stat-card stat-skip">
+      <div class="stat-value" id="statSkip">0</div>
+      <div class="stat-label">Skipped</div>
+    </div>
+  </div>
+
+  <!-- Decisions list -->
+  <div id="decisionsSection" style="display:none">
+    <div class="section-head">
+      <h3>Decisions</h3>
+      <span class="count" id="decisionCount">0</span>
+      <div class="filter-tabs">
+        <button class="tab active" onclick="setFilter('ALL', this)">All</button>
+        <button class="tab" onclick="setFilter('CREATE', this)">Create</button>
+        <button class="tab" onclick="setFilter('UPDATE', this)">Update</button>
+        <button class="tab" onclick="setFilter('SKIP', this)">Skip</button>
+      </div>
+    </div>
+    <div class="decisions" id="decisionsList"></div>
+  </div>
+
+  <!-- Empty state -->
+  <div class="empty" id="emptyState">
+    <div class="empty-icon">📬</div>
+    <h3>No decisions yet</h3>
+    <p>Click <strong>Process Messages</strong> to scan the Teams channel and<br>
+       generate a list of actions for your review.</p>
+  </div>
+
+  <!-- Loading state -->
+  <div class="loading-bar" id="loadingState" style="display:none">
+    <div class="spinner"></div>
+    <p id="loadingMsg">Running agent — this may take 20–40 seconds…</p>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  let currentRunId = null;
+  let allDecisions = [];
+  let activeFilter = 'ALL';
+  let submitted = false;
+
+  // ── Health check ──────────────────────────────────────────
+  async function checkHealth() {
+    try {
+      const r = await fetch('/health');
+      const ok = r.ok;
+      document.getElementById('healthDot').className = 'status-dot ' + (ok ? 'ok' : '');
+      document.getElementById('healthLabel').textContent = ok ? 'Agent online' : 'Offline';
+    } catch {
+      document.getElementById('healthLabel').textContent = 'Offline';
+    }
+  }
+  checkHealth();
+  setInterval(checkHealth, 30000);
+
+  // ── Process ───────────────────────────────────────────────
+  async function runProcess() {
+    if (submitted) {
+      if (!confirm('This will start a new run and discard the current results. Continue?')) return;
+      submitted = false;
+    }
+    setLoading(true, 'Running agent — fetching Teams messages, checking CRM and Jira…');
+    document.getElementById('btnProcess').disabled = true;
+    document.getElementById('btnSubmit').disabled = true;
+    document.getElementById('decisionsSection').style.display = 'none';
+    document.getElementById('stats').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'none';
+
+    try {
+      const r = await fetch('/api/process', { method: 'POST' });
+      if (!r.ok) {
+        const err = await r.json();
+        throw new Error(err.detail || 'Process failed');
+      }
+      const data = await r.json();
+      currentRunId = data.run_id;
+      allDecisions = data.decisions;
+      renderAll();
+      toast('Agent finished — review decisions below.', 'success');
+    } catch (e) {
+      toast('Error: ' + e.message, 'error');
+      document.getElementById('emptyState').style.display = 'block';
+    } finally {
+      setLoading(false);
+      document.getElementById('btnProcess').disabled = false;
+    }
+  }
+
+  // ── Submit ────────────────────────────────────────────────
+  async function runSubmit() {
+    if (!currentRunId) return;
+    const actionable = allDecisions.filter(d => d.action !== 'SKIP');
+    if (!confirm(`Submit ${actionable.length} action(s) to Jira and Teams? This cannot be undone.`)) return;
+
+    document.getElementById('btnSubmit').disabled = true;
+    document.getElementById('btnProcess').disabled = true;
+    setLoading(true, 'Submitting to Jira and Teams…');
+
+    try {
+      const r = await fetch('/api/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ run_id: currentRunId }),
+      });
+      if (!r.ok) {
+        const err = await r.json();
+        throw new Error(err.detail || 'Submit failed');
+      }
+      const data = await r.json();
+      allDecisions = data.decisions;
+      submitted = true;
+      renderAll();
+      toast(`Submitted ${data.submitted} action(s) successfully!`, 'success');
+    } catch (e) {
+      toast('Error: ' + e.message, 'error');
+      document.getElementById('btnSubmit').disabled = false;
+    } finally {
+      setLoading(false);
+      document.getElementById('btnProcess').disabled = false;
+    }
+  }
+
+  // ── Render ────────────────────────────────────────────────
+  function renderAll() {
+    updateStats();
+    renderDecisions();
+    document.getElementById('stats').style.display = 'flex';
+    document.getElementById('decisionsSection').style.display = 'block';
+    document.getElementById('emptyState').style.display = 'none';
+
+    const hasActionable = allDecisions.some(d => d.action !== 'SKIP');
+    document.getElementById('btnSubmit').disabled = !hasActionable || submitted;
+  }
+
+  function updateStats() {
+    const total = allDecisions.length;
+    const creates = allDecisions.filter(d => d.action === 'CREATE').length;
+    const updates = allDecisions.filter(d => d.action === 'UPDATE').length;
+    const skips = allDecisions.filter(d => d.action === 'SKIP').length;
+    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statCreate').textContent = creates;
+    document.getElementById('statUpdate').textContent = updates;
+    document.getElementById('statSkip').textContent = skips;
+  }
+
+  function renderDecisions() {
+    const list = document.getElementById('decisionsList');
+    const filtered = activeFilter === 'ALL'
+      ? allDecisions
+      : allDecisions.filter(d => d.action === activeFilter);
+    document.getElementById('decisionCount').textContent = filtered.length;
+    list.innerHTML = filtered.map((d, i) => cardHTML(d, i)).join('');
+  }
+
+  function cardHTML(d, i) {
+    const isSubmitted = d.submitted;
+    const actionClass = isSubmitted ? 'submitted' : `action-${d.action}`;
+    const badgeClass = isSubmitted ? 'badge-SUBMITTED' : `badge-${d.action}`;
+    const badgeText = isSubmitted ? '✓ SUBMITTED' : d.action;
+
+    const arrChip = d.arr
+      ? `<span class="arr-chip">${d.arr_formatted}</span>`
+      : `<span class="arr-chip unknown">Unknown ARR</span>`;
+
+    const title = d.draft_summary
+      || (d.action === 'UPDATE' ? `Update ${d.jira_key}` : d.client_name || 'N/A');
+
+    const meta = `${d.sender}${d.client_name ? ' · ' + d.client_name : ''}`;
+
+    // Expandable body
+    let bodyContent = '';
+
+    // Original message
+    bodyContent += `
+      <div class="card-section">
+        <div class="section-label">Original Teams Message</div>
+        <div class="message-bubble">
+          <div class="message-sender">${esc(d.sender)}</div>
+          ${esc(d.message_text)}
+        </div>
+      </div>`;
+
+    if (d.action === 'CREATE') {
+      bodyContent += `
+        <div class="card-section">
+          <div class="section-label">Draft Ticket Summary</div>
+          <div class="draft-box">${esc(d.draft_summary || '')}</div>
+        </div>
+        <div class="card-section">
+          <div class="section-label">Draft Description</div>
+          <div class="draft-box">${esc(d.draft_description || '')}</div>
+        </div>`;
+    }
+
+    if (d.action === 'UPDATE') {
+      bodyContent += `
+        <div class="card-section">
+          <div class="section-label">Existing Ticket</div>
+          <a class="jira-link" href="#">${esc(d.jira_key || '')}</a>
+        </div>
+        <div class="card-section">
+          <div class="section-label">Draft Comment</div>
+          <div class="draft-box">${esc(d.draft_comment || '')}</div>
+        </div>`;
+    }
+
+    if (d.teams_feedback) {
+      bodyContent += `
+        <div class="card-section">
+          <div class="section-label">Teams Feedback Message</div>
+          <div class="feedback-box">${esc(d.teams_feedback)}</div>
+        </div>`;
+    }
+
+    if (isSubmitted && d.submitted_jira_key) {
+      bodyContent += `
+        <div class="card-section">
+          <div class="section-label">Submitted As</div>
+          <span class="jira-link">${esc(d.submitted_jira_key)}</span>
+        </div>`;
+    }
+
+    return `
+      <div class="card ${actionClass}" id="card-${i}">
+        <div class="card-header" onclick="toggleCard(${i})">
+          <span class="action-badge ${badgeClass}">${badgeText}</span>
+          <div class="card-summary">
+            <div class="card-title">${esc(title)}</div>
+            <div class="card-meta">${esc(meta)}</div>
+          </div>
+          ${arrChip}
+          <span class="chevron" id="chev-${i}">▼</span>
+        </div>
+        <div class="card-body" id="body-${i}">${bodyContent}</div>
+      </div>`;
+  }
+
+  function toggleCard(i) {
+    const body = document.getElementById('body-' + i);
+    const chev = document.getElementById('chev-' + i);
+    const open = body.classList.toggle('open');
+    chev.classList.toggle('open', open);
+  }
+
+  function setFilter(f, el) {
+    activeFilter = f;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    renderDecisions();
+  }
+
+  // ── Utilities ─────────────────────────────────────────────
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function setLoading(show, msg) {
+    document.getElementById('loadingState').style.display = show ? 'block' : 'none';
+    if (msg) document.getElementById('loadingMsg').textContent = msg;
+  }
+
+  let toastTimer;
+  function toast(msg, type) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `toast ${type} show`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.className = 'toast'; }, 4000);
+  }
+</script>
+</body>
+</html>
