@@ -1,0 +1,17 @@
+services:
+  mock-api:
+    build: ./mock-api
+    ports:
+      - "8080:8080"
+
+  bridge-agent:
+    build: ./bridge-agent
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./bridge-agent/.env
+    environment:
+      # Override localhost default so the agent reaches mock-api via Docker network
+      MOCK_BASE_URL: http://mock-api:8080
+    depends_on:
+      - mock-api
