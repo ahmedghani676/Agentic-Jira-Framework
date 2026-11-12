@@ -1,7 +1,7 @@
 <<<<<<< HEAD
 # AI-Engineer-Coding-Challenge
 =======
-# WorkFlex Bridge Agent
+# Bridge Agent
 
 An AI-native backend service that reads Microsoft Teams `#feature-requests` messages, cross-references HubSpot CRM for customer ARR, checks Jira for duplicate tickets, and proposes a set of actions for human review before writing anything to Jira or Teams.
 
